@@ -59,6 +59,39 @@ class HashTest < MiniTest::Spec
         end
       end
     end
+
+
+    describe "with :extend and :as" do
+      hash_song = hash_representer do property :name end
+
+      let (:hash_album) { Module.new do
+        include Representable::Hash
+        property :song, :extend => hash_song, :class => Song, :as => :hit
+      end }
+
+      let (:album) { OpenStruct.new(:song => Song.new("Liar")).extend(hash_album) }
+
+      it { album.to_hash.must_equal("hit" => {"name" => "Liar"}) }
+      it { album.from_hash("hit" => {"name" => "Go With Me"}).must_equal OpenStruct.new(:song => Song.new("Go With Me")) }
+    end
+    # describe "FIXME COMBINE WITH ABOVE with :extend and :as" do
+    #   hash_song = Module.new do
+    #     include Representable::XML
+    #     self.representation_wrap = :song
+    #     property :name
+    #   end
+
+    #   let (:hash_album) { Module.new do
+    #     include Representable::XML
+    #     self.representation_wrap = :album
+    #     property :song, :extend => hash_song, :class => Song, :as => :hit
+    #   end }
+
+    #   let (:album) { OpenStruct.new(:song => Song.new("Liar")).extend(hash_album) }
+
+    #   it { album.to_xml.must_equal_xml("<album><hit><name>Liar</name></hit></album>") }
+    #   #it { album.from_hash("hit" => {"name" => "Go With Me"}).must_equal OpenStruct.new(:song => Song.new("Go With Me")) }
+    # end
   end
 
 
