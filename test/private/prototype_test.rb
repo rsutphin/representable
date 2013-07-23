@@ -130,6 +130,48 @@ class BllaTest < MiniTest::Spec
   end
 
 
+  # Scalar + Hash
+  it do
+    ScalarRepresenter.new("Kinetic",
+      SimplerDefinition.new(Representable::Definition.new(:title), nil), :hash).
+      serialize.
+      must_equal("Kinetic")
+  end
+
+  it do
+    obj = ScalarRepresenter.new(nil,
+      SimplerDefinition.new(Representable::Definition.new(:title), nil), :hash).
+      deserialize("Kinetic")
+
+    obj.must_equal("Kinetic")
+  end
+
+
+  # Object with Scalar + Hash
+  class HashScalarDecorator < Representable::Decorator
+    def to_hash(*)
+      represented
+    end
+
+    def from_hash(hash, *args)
+      hash
+    end
+  end
+  it do
+    ObjectRepresenter.new("Kinetic",
+      SimplerDefinition.new(Representable::Definition.new(:song, :extend => HashScalarDecorator), nil), :hash).
+      serialize.
+      must_equal("Kinetic")
+  end
+  it do
+    obj = ObjectRepresenter.new(nil,
+      SimplerDefinition.new(Representable::Definition.new(:song, :extend => HashScalarDecorator), nil), :hash).
+      deserialize("Kinetic")
+
+    obj.must_equal("Kinetic")
+  end
+
+
   # Collection + Hash
   it do
     CollectionRepresenter.new([song, song],
@@ -174,29 +216,50 @@ class BllaTest < MiniTest::Spec
   end
 
 
- # Scalar + Hash
-  it do
-    ScalarRepresenter.new("Kinetic",
-      SimplerDefinition.new(Representable::Definition.new(:title), nil), :hash).
-      serialize.
-      must_equal("Kinetic")
-  end
-
-  it do
-    obj = ScalarRepresenter.new(nil,
-      SimplerDefinition.new(Representable::Definition.new(:title), nil), :hash).
-      deserialize("Kinetic")
-
-    obj.must_equal("Kinetic")
-  end
-
-
   # Scalar + XML
   it do
     ScalarRepresenter.new("Kinetic",
       SimplerDefinition.new(Representable::Definition.new(:title), nil), :node).
       serialize.
       must_equal("Kinetic")
+  end
+
+  # Object with Scalar + XML
+  class XMLScalarDecorator < Representable::Decorator
+    def to_node(*)
+      document = Nokogiri::XML::Document.new # TODO: check if passing in parent is more performant (namespaces?).
+
+      #if wrap = options[:wrap]
+      #  parent << wrap_node = node_for(parent, wrap)
+      #end
+
+      wrapped = node_for(document, represented.name)
+      wrapped.content = represented.to_s
+
+      document << wrapped
+    end
+
+  private
+    def node_for(document, name)
+      Nokogiri::XML::Node.new(name.to_s, document)
+    end
+  end
+  class Scalar
+    def initialize(name, data)
+      @name, @data = name, data
+    end
+    attr_reader :name
+
+    def to_s
+      @data
+    end
+  end
+  it do
+    ObjectRepresenter.new(Scalar.new(:title, "Kinetic"),
+      SimplerDefinition.new(Representable::Definition.new(:title, :decorator => XMLScalarDecorator), nil), :node).
+      serialize.
+      to_s.
+      must_equal("<title>Kinetic</title>")
   end
 
   # it do
@@ -222,7 +285,7 @@ class BllaTest < MiniTest::Spec
     end
 
     def read(hash)
-      fragment = hash[from]
+      fragment = hash[from] # if we wrap here, we can use :from, but also the representer's wrap or both. if we let the representer wrap itself here, it doesn't know about alternative wraps.
 
       deserialize(fragment)
     end
@@ -268,6 +331,7 @@ class BllaTest < MiniTest::Spec
 
   class XMLObjectBinding < JSONObjectBinding
     def write(parent, value)
+      # to be consistent with Hash: create the wrap <song> node here and add childs from the #serialize call.
       parent << serialize(value)
 
       parent
@@ -319,6 +383,7 @@ class BllaTest < MiniTest::Spec
   private
 
     def serialize(value) # DISCUSS: pass from outside?
+      #ScalarRepresenter.new(value, SimplerDefinition.new(@definition, nil), :node).serialize # prepare, to_json
       ScalarRepresenter.new(value, SimplerDefinition.new(@definition, nil), :node).serialize # prepare, to_json
     end
 
