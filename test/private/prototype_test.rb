@@ -274,7 +274,9 @@ class BllaTest < MiniTest::Spec
 
 
   # Binding -----------
-  class JSONScalarBinding
+
+
+  class JSONObjectBinding
     def initialize(definition)
       @definition =definition
     end
@@ -291,12 +293,12 @@ class BllaTest < MiniTest::Spec
     end
 
   private
-    def serialize(value) # DISCUSS: pass Representer.serialize from outside?
-      ScalarRepresenter.new(value, SimplerDefinition.new(@definition, value), :json).serialize # prepare, to_json
+    def serialize(value) # DISCUSS: pass from outside?
+      ObjectRepresenter.new(value, SimplerDefinition.new(@definition, nil), :hash).serialize # prepare, to_json
     end
 
     def deserialize(fragment)
-      ScalarRepresenter.new(nil, SimplerDefinition.new(@definition, nil), :json).deserialize(fragment) # prepare, from_json
+      ObjectRepresenter.new(nil, SimplerDefinition.new(@definition, nil), :hash).deserialize(fragment) # prepare, from_json
     end
 
     def from
@@ -304,12 +306,15 @@ class BllaTest < MiniTest::Spec
     end
   end
 
-  class JSONObjectBinding < JSONScalarBinding
-    def serialize(value) # DISCUSS: pass from outside?
-      ObjectRepresenter.new(value, SimplerDefinition.new(@definition, nil), :hash).serialize # prepare, to_json
+  class JSONScalarBinding < JSONObjectBinding # DISCUSS: do we really need this binding?
+  private
+    def serialize(value) # DISCUSS: pass Representer.serialize from outside?
+      @definition.options[:extend] = HashScalarDecorator
+      ObjectRepresenter.new(value, SimplerDefinition.new(@definition, value), :hash).serialize # prepare, to_json
     end
 
     def deserialize(fragment)
+      @definition.options[:extend] = HashScalarDecorator
       ObjectRepresenter.new(nil, SimplerDefinition.new(@definition, nil), :hash).deserialize(fragment) # prepare, from_json
     end
   end
@@ -420,6 +425,12 @@ class BllaTest < MiniTest::Spec
     # Scalar + Hash
     it { JSONScalarBinding.new(Representable::Definition.new(:title)).write({}, "Kinetic").
       must_equal({"title"=>"Kinetic"}) }
+
+    it do
+      obj = JSONScalarBinding.new(Representable::Definition.new(:title)).read({"title"=>"Kinetic"})
+
+      obj.must_equal("Kinetic")
+    end
 
 
     # Object + Hash
