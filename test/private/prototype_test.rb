@@ -13,11 +13,11 @@ require 'test_helper'
 # Object and ScalarRepresenter should be the same where we have a special ScalarDecorator with #to_node etc
 
 class ObjectRepresenter
-  def initialize(represented, definition, serialize_method, deserialize_method=nil)
+  def initialize(represented, definition, format)
     @represented = represented
     @definition = definition
-    @serialize_method = serialize_method
-    @deserialize_method = deserialize_method
+
+    @format = format
 
     #@decorator = prepare ----> pass in represented here? what about create_object, then?
   end
@@ -38,19 +38,27 @@ private
   def serialize_for(object)
     decorator = prepare(object)
 
-    decorator.send(@serialize_method, {:wrap => false})
+    decorator.send(serialize_method, {:wrap => false})
   end
 
   def deserialize_for(object, data)
     decorator = prepare(object)
 
-    decorator.send(@deserialize_method, data)
+    decorator.send(deserialize_method, data)
   end
 
   def prepare(object)
     mod = @definition.send(:representer_module_for, object)
 
     decorator = mod.prepare(object)
+  end
+
+  def serialize_method
+    "to_#{@format}"
+  end
+
+  def deserialize_method
+    "from_#{@format}"
   end
 end
 
@@ -108,14 +116,14 @@ class BllaTest < MiniTest::Spec
   # Object + Hash
   it do
     ObjectRepresenter.new(song,
-      SimplerDefinition.new(Representable::Definition.new(:song, :extend => SongRepresenter), song), :to_hash).
+      SimplerDefinition.new(Representable::Definition.new(:song, :extend => SongRepresenter), song), :hash).
       serialize.
       must_equal({"title"=>"Kinetic"})
   end
 
   it do
     obj = ObjectRepresenter.new(nil,
-      SimplerDefinition.new(Representable::Definition.new(:song, :extend => SongRepresenter, :class => Song), nil), :to_hash, :from_hash).
+      SimplerDefinition.new(Representable::Definition.new(:song, :extend => SongRepresenter, :class => Song), nil), :hash).
       deserialize({"title"=>"Kinetic"})
 
       obj.title.must_equal("Kinetic")
@@ -125,14 +133,14 @@ class BllaTest < MiniTest::Spec
   # Collection + Hash
   it do
     CollectionRepresenter.new([song, song],
-      SimplerDefinition.new(Representable::Definition.new(:song, :extend => SongRepresenter), song), :to_hash).
+      SimplerDefinition.new(Representable::Definition.new(:song, :extend => SongRepresenter), song), :hash).
       serialize.
       must_equal([{"title"=>"Kinetic"}, {"title"=>"Kinetic"}])
   end
 
   it do
     array = CollectionRepresenter.new(nil,
-      SimplerDefinition.new(Representable::Definition.new(:songs, :extend => SongRepresenter, :class => Song), nil), :to_hash, :from_hash).
+      SimplerDefinition.new(Representable::Definition.new(:songs, :extend => SongRepresenter, :class => Song), nil), :hash).
       deserialize([{"title"=>"Kinetic"}, {"title"=>"Contention"}])
 
       array[0].title.must_equal("Kinetic")
@@ -143,7 +151,7 @@ class BllaTest < MiniTest::Spec
   # Collection + XML
   it do
     nodes = CollectionRepresenter.new([song, song],
-      SimplerDefinition.new(Representable::Definition.new(:song, :extend => XMLSongRepresenter), song), :to_node).
+      SimplerDefinition.new(Representable::Definition.new(:song, :extend => XMLSongRepresenter), song), :node).
       serialize
 
       nodes.first.must_be_kind_of(Nokogiri::XML::Element)
@@ -158,7 +166,7 @@ class BllaTest < MiniTest::Spec
     xml_array = Nokogiri::XML.parse("<root><song><title>Kinetic</title></song><song><title>Contention</title></song></root>").root
 
     array = CollectionRepresenter.new(nil,
-      SimplerDefinition.new(Representable::Definition.new(:song, :extend => XMLSongRepresenter, :class => Song), song), :to_node, :from_node).
+      SimplerDefinition.new(Representable::Definition.new(:song, :extend => XMLSongRepresenter, :class => Song), song), :node).
       deserialize(xml_array.children)
 
     array[0].title.must_equal("Kinetic")
@@ -169,14 +177,14 @@ class BllaTest < MiniTest::Spec
  # Scalar + Hash
   it do
     ScalarRepresenter.new("Kinetic",
-      SimplerDefinition.new(Representable::Definition.new(:title), nil), :to_hashhhhh).
+      SimplerDefinition.new(Representable::Definition.new(:title), nil), :hash).
       serialize.
       must_equal("Kinetic")
   end
 
   it do
     obj = ScalarRepresenter.new(nil,
-      SimplerDefinition.new(Representable::Definition.new(:title), nil), :to_hash, :from_hashhhh).
+      SimplerDefinition.new(Representable::Definition.new(:title), nil), :hash).
       deserialize("Kinetic")
 
     obj.must_equal("Kinetic")
@@ -186,7 +194,7 @@ class BllaTest < MiniTest::Spec
   # Scalar + XML
   it do
     ScalarRepresenter.new("Kinetic",
-      SimplerDefinition.new(Representable::Definition.new(:title), nil), :to_node).
+      SimplerDefinition.new(Representable::Definition.new(:title), nil), :node).
       serialize.
       must_equal("Kinetic")
   end
@@ -221,11 +229,11 @@ class BllaTest < MiniTest::Spec
 
   private
     def serialize(value) # DISCUSS: pass Representer.serialize from outside?
-      ScalarRepresenter.new(value, SimplerDefinition.new(@definition, value), :to_json).serialize # prepare, to_json
+      ScalarRepresenter.new(value, SimplerDefinition.new(@definition, value), :json).serialize # prepare, to_json
     end
 
     def deserialize(fragment)
-      ScalarRepresenter.new(nil, SimplerDefinition.new(@definition, nil), :to_json, :blabla).deserialize(fragment) # prepare, from_json
+      ScalarRepresenter.new(nil, SimplerDefinition.new(@definition, nil), :json).deserialize(fragment) # prepare, from_json
     end
 
     def from
@@ -235,11 +243,11 @@ class BllaTest < MiniTest::Spec
 
   class JSONObjectBinding < JSONScalarBinding
     def serialize(value) # DISCUSS: pass from outside?
-      ObjectRepresenter.new(value, SimplerDefinition.new(@definition, nil), :to_hash).serialize # prepare, to_json
+      ObjectRepresenter.new(value, SimplerDefinition.new(@definition, nil), :hash).serialize # prepare, to_json
     end
 
     def deserialize(fragment)
-      ObjectRepresenter.new(nil, SimplerDefinition.new(@definition, nil), :to_json, :from_hash).deserialize(fragment) # prepare, from_json
+      ObjectRepresenter.new(nil, SimplerDefinition.new(@definition, nil), :hash).deserialize(fragment) # prepare, from_json
     end
   end
 
@@ -283,11 +291,11 @@ class BllaTest < MiniTest::Spec
     end
 
     def serialize(value) # DISCUSS: pass from outside?
-      ObjectRepresenter.new(value, SimplerDefinition.new(@definition, nil), :to_node).serialize # prepare, to_json
+      ObjectRepresenter.new(value, SimplerDefinition.new(@definition, nil), :node).serialize # prepare, to_json
     end
 
     def deserialize(node)
-      ObjectRepresenter.new(nil, SimplerDefinition.new(@definition, nil), :to_node, :from_node).deserialize(node)
+      ObjectRepresenter.new(nil, SimplerDefinition.new(@definition, nil), :node).deserialize(node)
     end
   end
 
@@ -311,11 +319,11 @@ class BllaTest < MiniTest::Spec
   private
 
     def serialize(value) # DISCUSS: pass from outside?
-      ScalarRepresenter.new(value, SimplerDefinition.new(@definition, nil), :to_node).serialize # prepare, to_json
+      ScalarRepresenter.new(value, SimplerDefinition.new(@definition, nil), :node).serialize # prepare, to_json
     end
 
     def deserialize(node)
-      ScalarRepresenter.new(nil, SimplerDefinition.new(@definition, nil), :to_node, :from_node).deserialize(node.first.content) # FIXME: not sure about this.
+      ScalarRepresenter.new(nil, SimplerDefinition.new(@definition, nil), :node).deserialize(node.first.content) # FIXME: not sure about this.
     end
 
     #def options
