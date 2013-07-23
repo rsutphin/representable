@@ -18,6 +18,8 @@ class ObjectRepresenter
     @definition = definition
     @serialize_method = serialize_method
     @deserialize_method = deserialize_method
+
+    #@decorator = prepare ----> pass in represented here? what about create_object, then?
   end
 
   def serialize
@@ -25,12 +27,12 @@ class ObjectRepresenter
   end
 
   def deserialize(data)
-        # DISCUSS: does it make sense to skip deserialization of nil-values here?
-        @definition.create_object(data).tap do |obj|
-          #super(obj).send(deserialize_method, data, @user_options)
-          deserialize_for(obj, data)
-        end
-      end
+    # DISCUSS: does it make sense to skip deserialization of nil-values here?
+    @definition.create_object(data).tap do |obj|
+      #super(obj).send(deserialize_method, data, @user_options)
+      deserialize_for(obj, data)
+    end
+  end
 
 private
   def serialize_for(object)
@@ -247,39 +249,16 @@ class BllaTest < MiniTest::Spec
         super(obj)
       end
     end
+
+    def deserialize(array)
+      array.collect do |hsh|
+        super(hsh)
+      end
+    end
   end
 
-  class XMLScalarBinding < JSONObjectBinding
-    def write(parent, value)
-      wrap_node = parent
 
-      #if wrap = options[:wrap]
-      #  parent << wrap_node = node_for(parent, wrap)
-      #end
-
-      wrapped = node_for(parent, from)
-      wrapped.content = serialize(value)
-
-      wrap_node << wrapped
-
-      parent
-    end
-
-  private
-    def node_for(parent, name)
-      Nokogiri::XML::Node.new(name.to_s, parent.document)
-    end
-
-    def serialize(value) # DISCUSS: pass from outside?
-      ScalarRepresenter.new(value, SimplerDefinition.new(@definition, nil), :to_node).serialize # prepare, to_json
-    end
-
-    #def options
-    #  @definition.options
-    #end
-  end
-
-  class XMLObjectBinding < XMLScalarBinding
+  class XMLObjectBinding < JSONObjectBinding
     def write(parent, value)
       parent << serialize(value)
 
@@ -299,6 +278,10 @@ class BllaTest < MiniTest::Spec
       nodes     = doc.xpath(selector)
     end
 
+    def node_for(parent, name)
+      Nokogiri::XML::Node.new(name.to_s, parent.document)
+    end
+
     def serialize(value) # DISCUSS: pass from outside?
       ObjectRepresenter.new(value, SimplerDefinition.new(@definition, nil), :to_node).serialize # prepare, to_json
     end
@@ -308,6 +291,38 @@ class BllaTest < MiniTest::Spec
     end
   end
 
+  class XMLScalarBinding < XMLObjectBinding
+    def write(parent, value)
+      wrap_node = parent
+
+      #if wrap = options[:wrap]
+      #  parent << wrap_node = node_for(parent, wrap)
+      #end
+
+      wrapped = node_for(parent, from)
+      wrapped.content = serialize(value)
+
+      wrap_node << wrapped
+
+      parent
+    end
+
+
+  private
+
+    def serialize(value) # DISCUSS: pass from outside?
+      ScalarRepresenter.new(value, SimplerDefinition.new(@definition, nil), :to_node).serialize # prepare, to_json
+    end
+
+    def deserialize(node)
+      ScalarRepresenter.new(nil, SimplerDefinition.new(@definition, nil), :to_node, :from_node).deserialize(node.first.content) # FIXME: not sure about this.
+    end
+
+    #def options
+    #  @definition.options
+    #end
+  end
+
   class XMLCollectionBinding < XMLObjectBinding
     def write(parent, value)
       nodes = value.collect { |item| serialize(item) }
@@ -315,7 +330,7 @@ class BllaTest < MiniTest::Spec
       parent << set_for(parent, nodes)
     end
 
-    def deserialize(nodes)
+    def deserialize(nodes) # FIXME: same as JSONCollectionBinding
       nodes.collect do |nod|
         super(nod)
       end
@@ -348,12 +363,28 @@ class BllaTest < MiniTest::Spec
     it { JSONCollectionBinding.new(Representable::Definition.new(:songs, :extend => SongRepresenter)).write({}, [song, song]).
       must_equal("songs" => [{"title"=>"Kinetic"},{"title"=>"Kinetic"}]) }
 
+    it do
+      array = JSONCollectionBinding.new(Representable::Definition.new(:songs, :extend => SongRepresenter, :class => Song)).read("songs"=>[{"title"=>"Kinetic"},{"title"=>"Contention"}])
+
+      array[0].title.must_equal("Kinetic")
+      array[1].title.must_equal("Contention")
+    end
 
 
     # Scalar + XML
-    it { XMLScalarBinding.new(Representable::Definition.new(:title)).write(Nokogiri::XML::Document.new, "Kinetic").
+    it do
+      XMLScalarBinding.new(Representable::Definition.new(:title)).write(Nokogiri::XML::Document.new, "Kinetic").
       to_s.
-      must_equal_xml "<title>Kinetic</title>" }
+      must_equal_xml "<title>Kinetic</title>"
+    end
+
+    it do
+      xml_object = Nokogiri::XML.parse("<root><title>Kinetic</title></root>").root
+
+      obj = XMLScalarBinding.new(Representable::Definition.new(:title)).read(xml_object)
+
+      obj.must_equal "Kinetic"
+    end
 
 
     # Object + XML
