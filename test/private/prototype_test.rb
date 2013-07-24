@@ -76,14 +76,20 @@ class CollectionRepresenter < ObjectRepresenter
   end
 end
 
-class ScalarRepresenter < ObjectRepresenter
-  def serialize
-    @represented
+class HashScalarDecorator < Representable::Decorator # we don't really have to inherit here.
+  def to_hash(*)
+    represented
   end
 
-  def deserialize(data)
-    data
+  def from_hash(hash, *args)
+    # this currently works cause create_object returns the scalar from the doc, which is then @represented in the decorator. what about speed here?
+    hash
   end
+end
+
+class XMLScalarDecorator < HashScalarDecorator # we don't really have to inherit here.
+  alias_method :to_node, :to_hash
+  alias_method :from_node, :from_hash
 end
 
 class SimplerDefinition < Representable::Binding
@@ -131,32 +137,6 @@ class BllaTest < MiniTest::Spec
 
 
   # Scalar + Hash
-  it do
-    ScalarRepresenter.new("Kinetic",
-      SimplerDefinition.new(Representable::Definition.new(:title), nil), :hash).
-      serialize.
-      must_equal("Kinetic")
-  end
-
-  it do
-    obj = ScalarRepresenter.new(nil,
-      SimplerDefinition.new(Representable::Definition.new(:title), nil), :hash).
-      deserialize("Kinetic")
-
-    obj.must_equal("Kinetic")
-  end
-
-
-  # Object with Scalar + Hash
-  class HashScalarDecorator < Representable::Decorator
-    def to_hash(*)
-      represented
-    end
-
-    def from_hash(hash, *args)
-      hash
-    end
-  end
   it do
     ObjectRepresenter.new("Kinetic",
       SimplerDefinition.new(Representable::Definition.new(:song, :extend => HashScalarDecorator), nil), :hash).
@@ -218,48 +198,19 @@ class BllaTest < MiniTest::Spec
 
   # Scalar + XML
   it do
-    ScalarRepresenter.new("Kinetic",
-      SimplerDefinition.new(Representable::Definition.new(:title), nil), :node).
+    ObjectRepresenter.new("Kinetic",
+      SimplerDefinition.new(Representable::Definition.new(:title, :decorator => XMLScalarDecorator), nil), :node).
       serialize.
       must_equal("Kinetic")
   end
 
-  # Object with Scalar + XML
-  class XMLScalarDecorator < Representable::Decorator
-    def to_node(*)
-      document = Nokogiri::XML::Document.new # TODO: check if passing in parent is more performant (namespaces?).
-
-      #if wrap = options[:wrap]
-      #  parent << wrap_node = node_for(parent, wrap)
-      #end
-
-      wrapped = node_for(document, represented.name)
-      wrapped.content = represented.to_s
-
-      document << wrapped
-    end
-
-  private
-    def node_for(document, name)
-      Nokogiri::XML::Node.new(name.to_s, document)
-    end
-  end
-  class Scalar
-    def initialize(name, data)
-      @name, @data = name, data
-    end
-    attr_reader :name
-
-    def to_s
-      @data
-    end
-  end
+  # Scalar + XML
   it do
-    ObjectRepresenter.new(Scalar.new(:title, "Kinetic"),
+    ObjectRepresenter.new("Kinetic",
       SimplerDefinition.new(Representable::Definition.new(:title, :decorator => XMLScalarDecorator), nil), :node).
       serialize.
       to_s.
-      must_equal("<title>Kinetic</title>")
+      must_equal("Kinetic")
   end
 
   # it do
@@ -389,11 +340,13 @@ class BllaTest < MiniTest::Spec
 
     def serialize(value) # DISCUSS: pass from outside?
       #ScalarRepresenter.new(value, SimplerDefinition.new(@definition, nil), :node).serialize # prepare, to_json
-      ScalarRepresenter.new(value, SimplerDefinition.new(@definition, nil), :node).serialize # prepare, to_json
+      @definition.options[:extend] = XMLScalarDecorator
+      ObjectRepresenter.new(value, SimplerDefinition.new(@definition, nil), :node).serialize # prepare, to_json
     end
 
     def deserialize(node)
-      ScalarRepresenter.new(nil, SimplerDefinition.new(@definition, nil), :node).deserialize(node.first.content) # FIXME: not sure about this.
+      @definition.options[:extend] = XMLScalarDecorator
+      ObjectRepresenter.new(nil, SimplerDefinition.new(@definition, nil), :node).deserialize(node.first.content) # FIXME: not sure about this.
     end
 
     #def options
