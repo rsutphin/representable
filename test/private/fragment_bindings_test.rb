@@ -37,7 +37,11 @@ class FragmentBindingTest < MiniTest::Spec
     end
 
     def decorate(value)
-      ObjectRepresenter.new(value, SimplerDefinition.new(@definition, nil), :hash) # FIXME: remove need for SimplerDefinition.
+      ObjectRepresenter.new(value, SimplerDefinition.new(@definition, nil), format) # FIXME: remove need for SimplerDefinition.
+    end
+
+    def format
+      :hash
     end
   end
 
@@ -100,12 +104,8 @@ class FragmentBindingTest < MiniTest::Spec
       Nokogiri::XML::Node.new(name.to_s, parent.document)
     end
 
-    def serialize(value) # DISCUSS: pass from outside?
-      ObjectRepresenter.new(value, SimplerDefinition.new(@definition, nil), :node).serialize # prepare, to_json
-    end
-
-    def deserialize(node)
-      ObjectRepresenter.new(nil, SimplerDefinition.new(@definition, nil), :node).deserialize(node)
+    def format
+      :node
     end
   end
 
@@ -202,6 +202,15 @@ class FragmentBindingTest < MiniTest::Spec
         must_equal("songs" => ["Kinetic", "Contention"])
     end
 
+    it do # with scalar
+      array = JSONCollectionBinding.new(Representable::Definition.new(:songs), JSONScalarBinding).read("songs" => ["Kinetic", "Contention"])
+
+      array[0].must_equal("Kinetic")
+      array[1].must_equal("Contention")
+    end
+
+
+    let (:root) { Nokogiri::XML::Node.new("root", Nokogiri::XML::Document.new) }
 
     # Scalar + XML
     it do
@@ -233,12 +242,11 @@ class FragmentBindingTest < MiniTest::Spec
     end
 
     # Collection + XML
-    it {
-      root = Nokogiri::XML::Node.new("root", Nokogiri::XML::Document.new)
-
+    it do
       XMLCollectionBinding.new(Representable::Definition.new(:songs, :extend => XMLSongRepresenter)).write(root, [song, song]).
       to_s.
-      must_equal_xml "<root><song><title>Kinetic</title></song><song><title>Kinetic</title></song></root>" }
+      must_equal_xml "<root><song><title>Kinetic</title></song><song><title>Kinetic</title></song></root>"
+    end
 
     it do
       xml_object = Nokogiri::XML.parse("<root><song><title>Kinetic</title></song><song><title>Contention</title></song></root>").root
@@ -247,6 +255,12 @@ class FragmentBindingTest < MiniTest::Spec
 
       array[0].title.must_equal("Kinetic")
       array[1].title.must_equal("Contention")
+    end
+
+    it do # with scalar
+      XMLCollectionBinding.new(Representable::Definition.new(:song), JSONScalarBinding).write(root, ["Kinetic", "Contention"]).
+      to_s.
+      must_equal_xml "<root><song>Kinetic</song><song>Kinetic</song></root>"
     end
   end
 end
