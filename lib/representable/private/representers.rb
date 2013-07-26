@@ -1,20 +1,3 @@
-class Song
-    attr_accessor :title
-    def initialize(attrs={})
-      @title = attrs[:title]
-    end
-  end
-
-  module SongRepresenter
-    include Representable::Hash
-    property :title
-  end
-
-  module XMLSongRepresenter
-    include Representable::XML
-    property :title
-    self.representation_wrap = :song
-  end
 
 # used in Binding before real rendering
 # these Representer classes are generic and do not know anything about the format.
@@ -64,6 +47,9 @@ private
   def prepare(object)
     mod = @definition.send(:representer_module_for, object)
 
+    # FIXME: this happens when class.is_a?(Representable::JSON), that should be handled elsewhere.
+    return object unless mod
+
     decorator = mod.prepare(object)
   end
 
@@ -102,8 +88,13 @@ class HashScalarDecorator < Representable::Decorator # we don't really have to i
 end
 
 class XMLScalarDecorator < HashScalarDecorator # we don't really have to inherit here.
-  alias_method :to_node, :to_hash
+  #alias_method :to_node, :to_hash
   alias_method :from_node, :from_hash
+  def to_node(*)
+    wrap= Nokogiri::XML::Node.new(decorated.from, Nokogiri::XML::Document.new)
+    wrap.content = decorated
+    wrap
+  end
 end
 
 class SimplerDefinition < Representable::Binding

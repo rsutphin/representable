@@ -1,7 +1,26 @@
 require 'test_helper'
 
 
+
 class FragmentRepresenterTest < MiniTest::Spec
+  class Song
+    attr_accessor :title
+    def initialize(attrs={})
+      @title = attrs[:title]
+    end
+  end
+
+  module SongRepresenter
+    include Representable::Hash
+    property :title
+  end
+
+  module XMLSongRepresenter
+    include Representable::XML
+    property :title
+    self.representation_wrap = :song
+  end
+
 
   let (:song) { OpenStruct.new(:title => "Kinetic") }
 
@@ -66,10 +85,8 @@ class FragmentRepresenterTest < MiniTest::Spec
 
       nodes.first.must_be_kind_of(Nokogiri::XML::Element)
 
-      nodes.first.to_s.
-      must_equal_xml("<song><title>Kinetic</title></song>")
-      nodes.last.to_s.
-      must_equal_xml("<song><title>Kinetic</title></song>")
+      nodes[0].to_s.must_equal_xml("<song><title>Kinetic</title></song>")
+      nodes[1].to_s.must_equal_xml("<song><title>Kinetic</title></song>")
   end
 
   it do
@@ -86,19 +103,14 @@ class FragmentRepresenterTest < MiniTest::Spec
 
   # Scalar + XML
   it do
-    ObjectRepresenter.new("Kinetic",
-      SimplerDefinition.new(Representable::Definition.new(:title, :decorator => XMLScalarDecorator), nil), :node).
-      serialize.
-      must_equal("Kinetic")
-  end
+    node = ObjectRepresenter.new("Kinetic",
+      SimplerDefinition.new(Representable::Definition.new(:title, :decorator => XMLScalarDecorator), nil), :node). # since we call #to_node here, shouldn't this already return a Node?
+      serialize
 
-  # Scalar + XML
-  it do
-    ObjectRepresenter.new("Kinetic",
-      SimplerDefinition.new(Representable::Definition.new(:title, :decorator => XMLScalarDecorator), nil), :node).
-      serialize.
-      to_s.
-      must_equal("Kinetic")
+      node.
+      #must_equal("Kinetic")
+      must_be_kind_of(Nokogiri::XML::Element)
+      node.to_s.must_equal_xml("<title>Kinetic</title>")
   end
 
   # it do
