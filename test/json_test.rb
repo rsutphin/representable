@@ -60,7 +60,7 @@ module JsonTest
       describe "#from_json" do
         before do
           @band = @Band.new
-          @json  = {:name => "Nofx", :label => "NOFX"}.to_json
+          @json  = '{"name":"Nofx","label":"NOFX"}'
         end
 
         it "parses JSON and assigns properties" do
@@ -213,7 +213,7 @@ module JsonTest
       end
 
       it "#from_json creates correct accessors" do
-        band = Band.from_json({:name => "Bombshell Rocks"}.to_json)
+        band = Band.from_json('{"name":"Bombshell Rocks"}')
         assert_equal "Bombshell Rocks", band.name
       end
 
@@ -276,7 +276,7 @@ module JsonTest
       end
 
       it "respects :from in #from_json" do
-        song = Song.from_json({:songName => "Run To The Hills"}.to_json)
+        song = Song.from_json('{"songName":"Run To The Hills"}')
         assert_equal "Run To The Hills", song.name
       end
 
@@ -294,7 +294,7 @@ module JsonTest
       end
 
       it "respects :as in #from_json" do
-        song = Song.from_json({:songName => "Run To The Hills"}.to_json)
+        song = Song.from_json('{"songName":"Run To The Hills"}')
         assert_equal "Run To The Hills", song.name
       end
 
@@ -315,17 +315,17 @@ module JsonTest
 
     describe "#from_json" do
       it "uses default when property nil in doc" do
-        album = @Album.from_json({}.to_json)
+        album = @Album.from_json('{}')
         assert_equal "30 Years Live", album.name
       end
 
       it "uses value from doc when present" do
-        album = @Album.from_json({:name => "Live At The Wireless"}.to_json)
+        album = @Album.from_json('{"name":"Live At The Wireless"}')
         assert_equal "Live At The Wireless", album.name
       end
 
       it "uses value from doc when empty string" do
-        album = @Album.from_json({:name => ""}.to_json)
+        album = @Album.from_json('{"name":""}')
         assert_equal "", album.name
       end
     end
@@ -360,7 +360,7 @@ end
       end
 
       it "#from_json creates correct accessors" do
-        cd = CD.from_json({:songs => ["Out in the cold", "Microphone"]}.to_json)
+        cd = CD.from_json('{"songs":["Out in the cold","Microphone"]}')
         assert_equal ["Out in the cold", "Microphone"], cd.songs
       end
 
@@ -391,9 +391,7 @@ end
 
       describe "#from_json" do
         it "pushes collection items to array" do
-          cd = Compilation.from_json({:bands => [
-            {:name => "Cobra Skulls"},
-            {:name => "Diesel Boy"}]}.to_json)
+          cd = Compilation.from_json('{"bands":[{"name":"Cobra Skulls"},{"name":"Diesel Boy"}]}')
           assert_equal ["Cobra Skulls", "Diesel Boy"], cd.bands.map(&:name).sort
         end
 
@@ -420,7 +418,7 @@ end
       end
 
       it "respects :from in #from_json" do
-        songs = Songs.from_json({:songList => ["Out in the cold", "Microphone"]}.to_json)
+        songs = Songs.from_json('{"songList":["Out in the cold", "Microphone"]}')
         assert_equal ["Out in the cold", "Microphone"], songs.tracks
       end
 
