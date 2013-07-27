@@ -118,6 +118,7 @@ class JSONObjectBinding
   class XMLScalarBinding < XMLObjectBinding
     def initialize(*)
       super
+      @definition = @definition.clone
       @definition.options[:extend] = XMLScalarDecorator # FIXME: merge with JSONScalarBinding.
     end
 
@@ -129,22 +130,6 @@ class JSONObjectBinding
       def to_s
         @scalar
       end
-    end
-    def write(parent, value)
-      return serialize(value)
-
-      wrap_node = parent
-
-      #if wrap = options[:wrap]
-      #  parent << wrap_node = node_for(parent, wrap)
-      #end
-
-      wrapped = node_for(parent, from)
-      wrapped.content = serialize(value)
-
-      wrap_node << wrapped
-
-      parent
     end
 
     def serialize(value)
