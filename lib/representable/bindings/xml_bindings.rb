@@ -2,27 +2,6 @@ require 'representable/binding'
 
 module Representable
   module XML
-    module ObjectBinding
-      include Binding::Object
-
-      def serialize_method
-        :to_node
-      end
-
-      def deserialize_method
-        :from_node
-      end
-
-      def deserialize_node(node)
-        deserialize(node)
-      end
-
-      def serialize_node(node, value)
-        serialize(value)
-      end
-    end
-
-
     class PropertyBinding < Binding
       def self.build_for(definition, *args)
         return CollectionBinding.new(definition, *args)      if definition.array?
@@ -32,14 +11,9 @@ module Representable
         new(definition, *args)
       end
 
-      def initialize(*args)
-        super
-        extend ObjectBinding if typed? # FIXME.
-      end
-
       def write(parent, value)
         return XMLObjectBinding.new(self).write(parent, value) if typed?
-        return XMLScalarBinding.new(self).write(parent, value)
+        XMLScalarBinding.new(self).write(parent, value)
       end
 
       def read(node)
@@ -66,8 +40,7 @@ module Representable
       end
 
       def read(hash)
-        return FragmentNotFound unless hash.has_key?(from) # DISCUSS: put it all in #read for performance. not really sure if i like returning that special thing.
-
+        # DISCUSS: where is the check for existance?
         return XMLCollectionBinding.new(self).read(hash) if typed?
         return XMLCollectionBinding.new(self, XMLScalarBinding).read(hash)
       end
