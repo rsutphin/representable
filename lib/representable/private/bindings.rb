@@ -55,7 +55,6 @@ class JSONObjectBinding
       end
 
       def serialize(value) # DISCUSS: pass from outside?
-        puts "serializing: #{value.inspect}"
         value.collect do |obj| # DISCUSS: what if we wanna keep the original array?
           #super(obj)
           item_binding.serialize(obj)

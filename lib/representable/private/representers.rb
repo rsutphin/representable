@@ -49,6 +49,8 @@ private
 
     # FIXME: this happens when class.is_a?(Representable::JSON), that should be handled elsewhere.
     return object unless mod
+    # FIXME: handle that in prepare?
+    mod = mod.first if mod.is_a?(Array)
 
     decorator = mod.prepare(object)
   end
