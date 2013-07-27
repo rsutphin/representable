@@ -137,7 +137,7 @@ class JSONObjectBinding
     end
 
     def deserialize(node)
-      super node.first.content # should that be in #read?
+      super node.children.first.content # should that be in #read?
     end
   end
 
