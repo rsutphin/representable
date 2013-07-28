@@ -12,8 +12,20 @@ module Representable::XML
     end
 
     module Methods
-      def update_properties_from(doc, *args)
-        super(doc.search("./*"), *args) # pass the list of collection items to Hash::Collection#update_properties_from.
+      def update_properties_from(doc, options, format)
+        node = doc.search("./*") # pass the list of collection items to Hash::Collection#update_properties_from.
+        bin   = representable_mapper(format, options).bindings.first
+        #value = bin.deserialize(node)
+
+        if bin.typed?
+          bbin= XMLCollectionBinding.new(bin)
+        else
+         bbin= XMLCollectionBinding.new(bin, XMLScalarBinding)
+       end
+
+       value = bbin.deserialize(node)
+
+        represented.replace(value)
       end
     end
   end

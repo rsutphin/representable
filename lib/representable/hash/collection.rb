@@ -24,7 +24,16 @@ module Representable::Hash
 
     def update_properties_from(doc, options, format)
       bin   = representable_mapper(format, options).bindings.first
-      value = bin.deserialize_from(doc)
+      #value = bin.deserialize_from(doc)
+
+      if bin.typed?
+          bbin= JSONCollectionBinding.new(bin)
+        else
+         bbin= JSONCollectionBinding.new(bin, JSONScalarBinding)
+       end
+
+       value = bbin.deserialize(doc)
+
       represented.replace(value)
     end
 
