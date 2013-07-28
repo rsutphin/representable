@@ -10,13 +10,30 @@ module Representable
     def create_representation_with(doc, options, format)
       bin   = representable_mapper(format, options).bindings.first
       hash  = filter_keys_for(represented, options)
-      bin.write(doc, hash)
+
+      if bin.typed?
+          bbin= JSONHashBinding.new(bin)
+        else
+         bbin= JSONHashBinding.new(bin, XMLScalarBinding)
+       end
+
+      bbin.serialize(hash)
     end
 
     def update_properties_from(doc, options, format)
       bin   = representable_mapper(format, options).bindings.first
       hash  = filter_keys_for(doc, options)
-      value = bin.deserialize_from(hash)
+
+      #value = bin.deserialize_from(hash)
+
+      if bin.typed?
+          bbin= JSONHashBinding.new(bin)
+        else
+         bbin= JSONHashBinding.new(bin, XMLScalarBinding)
+       end
+
+       value = bbin.deserialize(hash)
+
       represented.replace(value)
     end
 

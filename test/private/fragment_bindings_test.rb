@@ -71,6 +71,18 @@ class FragmentBindingTest < MiniTest::Spec
       array[1].must_equal("Contention")
     end
 
+    # Hash + Hash
+    it { JSONHashBinding.new(Representable::Definition.new(:songs, :extend => SongRepresenter)).write({}, {"first" => song, "same" => song}).
+      must_equal({"songs"=>{"first"=>{"title"=>"Kinetic"}, "same"=>{"title"=>"Kinetic"}}}) }
+
+    it do
+      hash = JSONHashBinding.new(Representable::Definition.new(:songs, :extend => SongRepresenter, :class => Song)).read("songs" => {"first"=>{"title"=>"Kinetic"}, "same"=>{"title"=>"Contention"}})
+
+      hash["first"].title.must_equal("Kinetic")
+      hash["same"].title.must_equal("Contention")
+    end
+
+
 
     let (:root) { Nokogiri::XML::Node.new("root", Nokogiri::XML::Document.new) }
 

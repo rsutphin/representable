@@ -32,7 +32,7 @@ module Representable::Hash
          bbin= JSONCollectionBinding.new(bin, JSONScalarBinding)
        end
 
-       value = bbin.deserialize(doc)
+       value = bbin.deserialize(doc )
 
       represented.replace(value)
     end

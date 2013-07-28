@@ -41,35 +41,17 @@ module Representable
 
 
     class HashBinding < PropertyBinding
-
       def write(hash, value)
-        # requires value to respond to #each with two block parameters.
-        # return JSONObjectBinding.new(self).write(hash, value) if typed?
-        # return JSONScalarBinding.new(self).write(hash, value)
-        binding = JSONScalarBinding.new(self) unless typed?
-        binding = JSONObjectBinding.new(self) if typed?
-
-        # FIXME: use PropertyBinding for writing or #write here
-        hash[from] = {}.tap do |hsh|
-          value.each { |key, obj| hsh[key] = binding.serialize(obj) }
-        end
+        return JSONHashBinding.new(self).write(hash, value) if typed?
+        return JSONHashBinding.new(self, JSONScalarBinding).write(hash, value)
       end
 
       def read(hash)
-        # requires value to respond to #each with two block parameters.
-        # return JSONObjectBinding.new(self).write(hash, value) if typed?
-        # return JSONScalarBinding.new(self).write(hash, value)
-        binding = JSONScalarBinding.new(self) unless typed?
-        binding = JSONObjectBinding.new(self) if typed?
+        return FragmentNotFound unless hash.has_key?(from) # DISCUSS: put it all in #read for performance. not really sure if i like returning that special thing.
 
-        # FIXME: use PropertyBinding for writing or #write here
-        fragment = hash[from]
-        {}.tap do |hsh|
-          fragment.each { |key, item_fragment| hsh[key] = binding.deserialize(item_fragment) }
-
-        end
+        return JSONHashBinding.new(self).read(hash) if typed?
+        return JSONHashBinding.new(self, JSONScalarBinding).read(hash)
       end
-
     end
   end
 end

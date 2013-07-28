@@ -76,6 +76,27 @@ class JSONObjectBinding
     include SerialMethods
   end
 
+  # this is kindof the transformer from an abstract hash into the concrete representation, egg hash.
+  class JSONHashBinding < JSONObjectBinding
+    include JSONCollectionBinding::SerialMethods # FIXME: yeah
+
+    def serialize(value)
+      {}.tap do |hsh|
+        value.each do |k,v|
+          hsh[k] = item_binding.serialize(v)
+        end
+      end
+    end
+
+    def deserialize(hash)
+      {}.tap do |hsh|
+        hash.each do |k,v|
+          hsh[k] = item_binding.deserialize(v)
+        end
+      end
+    end
+  end
+
 
   class XMLObjectBinding < JSONObjectBinding
     # def write(parent, value)
