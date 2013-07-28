@@ -19,7 +19,14 @@ module Representable::Hash
 
     def create_representation_with(doc, options, format)
       bin   = representable_mapper(format, options).bindings.first
-      bin.write(doc, represented)
+
+      if bin.typed?
+          bbin= JSONCollectionBinding.new(bin)
+        else
+         bbin= JSONCollectionBinding.new(bin, JSONScalarBinding)
+       end
+
+       value = bbin.serialize(represented )
     end
 
     def update_properties_from(doc, options, format)
