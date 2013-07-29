@@ -1,6 +1,6 @@
 require 'representable/private/representers'
 
-class JSONObjectBinding
+  class JSONObjectBinding
     def initialize(definition)
       @definition = definition
     end
@@ -169,13 +169,6 @@ class JSONObjectBinding
     end
 
     def write(parent, items)
-      # items.collect do |obj| # DISCUSS: what if we wanna keep the original array?
-      #     #super(obj)
-      #       puts "obj: #{obj.inspect}"
-      #      puts "writing: #{item_binding.write(parent, obj)}"
-      #     item_binding.serialize(obj)
-      #   end
-
       nodes = serialize(items) # each->to_node
 
       parent << set_for(parent, nodes)
@@ -184,5 +177,63 @@ class JSONObjectBinding
   private
     def set_for(parent, nodes)
       Nokogiri::XML::NodeSet.new(parent.document, nodes)
+    end
+  end
+
+  class XMLHashBinding < JSONHashBinding
+    def initialize(definition, item_binding_class=XMLObjectBinding)
+      @definition = definition
+        @item_binding_class = item_binding_class
+    end
+
+    def write(parent, value)
+      nodes = serialize(value) # each->to_node
+
+      parent << (Nokogiri::XML::Node.new(from, parent.document) << nodes)# FIXME: make this beautiful!
+    end
+
+    def serialize(value) # we could use the original HashBinding#serialize here, and override the Nokogiri API so that hash[k] = .. is transformed to this?
+      hash = super # {:first => <node>, ..}
+      parent = Nokogiri::XML::Document.new
+
+      list = hash.collect do |k, nod|
+        Nokogiri::XML::Node.new(k, parent) << nod # DISCUSS: use Scalar?
+      end
+
+
+      Nokogiri::XML::NodeSet.new(parent, list)
+    end
+
+    def deserialize(nodes)
+      nodes = nodes.children
+
+
+      {}.tap do |hsh|
+        nodes.each do |nod|
+          hsh[nod.name] = item_binding.deserialize(nod.children.first)
+        end
+      end
+    end
+
+
+
+    def read(node) # FIXME: from XMLObject.
+      nodes = find_nodes(node)
+
+      deserialize(nodes)
+    end
+
+  private
+    def find_nodes(doc) # FIXME: from XMLObject.
+      selector  = from
+      #selector  = "#{options[:wrap]}/#{xpath}" if options[:wrap]
+      nodes     = doc.xpath(selector)
+    end
+
+
+
+  private
+    def item_binding
+      @item_binding_class.new(@definition)
     end
   end

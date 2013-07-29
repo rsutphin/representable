@@ -131,7 +131,7 @@ class FragmentBindingTest < MiniTest::Spec
       array[1].title.must_equal("Contention")
     end
 
-    it "ficken" do # with scalar
+    it do # with scalar
       XMLCollectionBinding.new(Representable::Definition.new(:song), XMLScalarBinding).write(root, ["Kinetic", "Contention"]).
       to_s.
       must_equal_xml "<root><song>Kinetic</song><song>Contention</song></root>"
@@ -144,6 +144,19 @@ class FragmentBindingTest < MiniTest::Spec
 
       array[0].must_equal("Kinetic")
       array[1].must_equal("Contention")
+    end
+
+    # Hash + XML
+    it do XMLHashBinding.new(Representable::Definition.new(:songs, :extend => XMLSongRepresenter)).write(root, {"first" => song, "same" => song}).
+      to_s.
+      must_equal_xml("<root><songs><first><song><title>Kinetic</title></song></first><same><song><title>Kinetic</title></song></same></songs></root>")
+    end
+
+    it "ficken" do
+      hash = XMLHashBinding.new(Representable::Definition.new(:songs, :extend => XMLSongRepresenter, :class => Song)).read(Nokogiri::XML.parse("<root><songs><first><song><title>Kinetic</title></song></first><same><song><title>Contention</title></song></same></songs></root>").root)
+
+      hash["first"].title.must_equal("Kinetic")
+      hash["same"].title.must_equal("Contention")
     end
   end
 
