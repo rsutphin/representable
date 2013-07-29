@@ -64,20 +64,6 @@ private
   end
 end
 
-class CollectionRepresenter < ObjectRepresenter
-  def serialize
-    @represented.collect do |obj|
-      serialize_for(obj)
-    end
-  end
-
-  def deserialize(data)
-    data.collect do |fragment| # DISCUSS: what if we don't want to override the incoming Array?
-      super(fragment)
-    end
-  end
-end
-
 class HashScalarDecorator < Representable::Decorator # we don't really have to inherit here.
   def to_hash(*)
     represented

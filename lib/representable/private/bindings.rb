@@ -1,5 +1,6 @@
 require 'representable/private/representers'
 
+
   class JSONObjectBinding
     def initialize(definition)
       @definition = definition
@@ -39,6 +40,9 @@ require 'representable/private/representers'
       :hash
     end
   end
+  class ObjectBinding < JSONObjectBinding
+
+  end
 
   class JSONScalarBinding < JSONObjectBinding # DISCUSS: do we really need this binding?
     def initialize(*)
@@ -47,38 +51,54 @@ require 'representable/private/representers'
     end
   end
 
-  class JSONCollectionBinding < JSONObjectBinding # inherit #read and #write
-    module SerialMethods # this should actually be a separate class embracing an already un-bound array.
-      def initialize(definition, item_binding_class=JSONObjectBinding)
-        @definition = definition
-        @item_binding_class = item_binding_class
-      end
+  class CollectionRepresenter # means: #serialize/#deserialize
+    def initialize(definition, item_binding_class=ObjectBinding)
+      @item_binding = item_binding_class.new(definition)
+    end
 
-      def serialize(value) # DISCUSS: pass from outside?
-        value.collect do |obj| # DISCUSS: what if we wanna keep the original array?
-          #super(obj)
-          item_binding.serialize(obj)
-        end
-      end
-
-      def deserialize(array)
-        array.collect do |hsh|
-          #super(hsh)
-          item_binding.deserialize(hsh)
-        end
-      end
-
-    private
-      def item_binding
-        @item_binding_class.new(@definition)
+    def serialize(value) # DISCUSS: pass from outside?
+      value.collect do |obj| # DISCUSS: what if we wanna keep the original array?
+        item_binding.serialize(obj)
       end
     end
-    include SerialMethods
+
+    def deserialize(array)
+      array.collect do |hsh|
+        item_binding.deserialize(hsh)
+      end
+    end
+
+  private
+    attr_reader :item_binding
+  end
+
+  class JSONCollectionBinding < JSONObjectBinding # inherit #read and #write
+    def initialize(definition, item_binding_class=ObjectBinding) # TODO: don't use Binding but Representer here! we only want serialize/deserialize!
+      @definition = definition
+      @item_binding_class = item_binding_class
+    end
+
+    def serialize(value)
+      # the point here is to use an abstract Collection representer in JSON, XML, Hash, YAML, etc.
+      CollectionRepresenter.new(@definition, @item_binding_class).serialize(value)
+    end
+    def deserialize(array)
+      CollectionRepresenter.new(@definition, @item_binding_class).deserialize(array)
+    end
   end
 
   # this is kindof the transformer from an abstract hash into the concrete representation, egg hash.
   class JSONHashBinding < JSONObjectBinding
-    include JSONCollectionBinding::SerialMethods # FIXME: yeah
+    def initialize(definition, item_binding_class=ObjectBinding)
+      @definition = definition
+      @item_binding_class = item_binding_class
+    end # FIXME: yeah
+
+    def item_binding
+        @item_binding_class.new(@definition)
+      end
+
+
 
     def serialize(value)
       {}.tap do |hsh|
@@ -163,15 +183,24 @@ require 'representable/private/representers'
   end
 
   class XMLCollectionBinding < XMLObjectBinding
-    include JSONCollectionBinding::SerialMethods # this double-inheritance is an indicator for my wrong class structure.
+    #include JSONCollectionBinding::SerialMethods # this double-inheritance is an indicator for my wrong class structure.
     def initialize(definition, item_binding_class=XMLObjectBinding)
-      super
+      @definition = definition
+      @item_binding_class = item_binding_class
     end
 
     def write(parent, items)
       nodes = serialize(items) # each->to_node
 
       parent << set_for(parent, nodes)
+    end
+
+    def serialize(value)
+      # the point here is to use an abstract Collection representer in JSON, XML, Hash, YAML, etc.
+      CollectionRepresenter.new(@definition, @item_binding_class).serialize(value)
+    end
+    def deserialize(array)
+      CollectionRepresenter.new(@definition, @item_binding_class).deserialize(array)
     end
 
   private
