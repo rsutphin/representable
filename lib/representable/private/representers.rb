@@ -84,7 +84,3 @@ class XMLScalarDecorator < HashScalarDecorator # we don't really have to inherit
     wrap
   end
 end
-
-class SimplerDefinition < Representable::Binding
-  include Representable::Binding::Object
-end

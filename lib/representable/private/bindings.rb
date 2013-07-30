@@ -33,7 +33,7 @@ require 'representable/private/representers'
     end
 
     def decorate(value)
-      ObjectRepresenter.new(value, SimplerDefinition.new(@definition, nil), format) # FIXME: remove need for SimplerDefinition.
+      ObjectRepresenter.new(value, @definition, format) # FIXME: remove need for SimplerDefinition.
     end
 
     def format
@@ -52,13 +52,16 @@ require 'representable/private/representers'
   end
 
   class CollectionRepresenter # means: #serialize/#deserialize
-    def initialize(definition, item_binding_class=ObjectBinding)
+    def initialize(definition,format=:hash, item_binding_class=ObjectBinding)
+      @definition = definition
       @item_binding = item_binding_class.new(definition)
+      @format = format
     end
 
     def serialize(value) # DISCUSS: pass from outside?
       value.collect do |obj| # DISCUSS: what if we wanna keep the original array?
-        item_binding.serialize(obj)
+        #item_binding.serialize(obj)
+        ObjectRepresenter.new(obj, @definition, @format).serialize
       end
     end
 
@@ -80,11 +83,12 @@ require 'representable/private/representers'
 
     def serialize(value)
       # the point here is to use an abstract Collection representer in JSON, XML, Hash, YAML, etc.
-      CollectionRepresenter.new(@definition, @item_binding_class).serialize(value)
+      CollectionRepresenter.new(@definition, format, @item_binding_class).serialize(value)
     end
     def deserialize(array)
-      CollectionRepresenter.new(@definition, @item_binding_class).deserialize(array)
+      CollectionRepresenter.new(@definition, format, @item_binding_class).deserialize(array)
     end
+
   end
 
   # this is kindof the transformer from an abstract hash into the concrete representation, egg hash.
@@ -197,10 +201,10 @@ require 'representable/private/representers'
 
     def serialize(value)
       # the point here is to use an abstract Collection representer in JSON, XML, Hash, YAML, etc.
-      CollectionRepresenter.new(@definition, @item_binding_class).serialize(value)
+      CollectionRepresenter.new(@definition, format, @item_binding_class).serialize(value)
     end
     def deserialize(array)
-      CollectionRepresenter.new(@definition, @item_binding_class).deserialize(array)
+      CollectionRepresenter.new(@definition, format, @item_binding_class).deserialize(array)
     end
 
   private

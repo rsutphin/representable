@@ -106,23 +106,13 @@ module Representable
     # Hooks into #serialize and #deserialize to setup (extend/decorate) typed properties
     # at runtime.
     module Prepare
-      # Extends the object with its representer before serialization.
-      def serialize(*)
-        prepare(super)
-      end
+      # def prepare(object)
+      #   return object unless mod = representer_module_for(object) # :extend.
 
-      def deserialize(*)
-        prepare(super)
-      end
+      #   mod = mod.first if mod.is_a?(Array) # TODO: deprecate :extend => [..]
+      #   mod.prepare(object)
+      # end
 
-      def prepare(object)
-        return object unless mod = representer_module_for(object) # :extend.
-
-        mod = mod.first if mod.is_a?(Array) # TODO: deprecate :extend => [..]
-        mod.prepare(object)
-      end
-
-    private
       def representer_module_for(object, *args)
         call_proc_for(representer_module, object)   # TODO: how to pass additional data to the computing block?`
       end
@@ -133,18 +123,18 @@ module Representable
     module Object
       include Binding::Prepare
 
-      def serialize(object)
-        return object if object.nil?
+      # def serialize(object)
+      #   return object if object.nil?
 
-        super.send(serialize_method, @user_options.merge!({:wrap => false}))  # TODO: pass :binding => self
-      end
+      #   super.send(serialize_method, @user_options.merge!({:wrap => false}))  # TODO: pass :binding => self
+      # end
 
-      def deserialize(data)
-        # DISCUSS: does it make sense to skip deserialization of nil-values here?
-        create_object(data).tap do |obj|
-          super(obj).send(deserialize_method, data, @user_options)
-        end
-      end
+      # def deserialize(data)
+      #   # DISCUSS: does it make sense to skip deserialization of nil-values here?
+      #   create_object(data).tap do |obj|
+      #     super(obj).send(deserialize_method, data, @user_options)
+      #   end
+      # end
 
       def create_object(fragment)
         instance_for(fragment) or class_for(fragment)
@@ -165,5 +155,7 @@ module Representable
         call_proc_for(options[:instance], fragment) or get
       end
     end
+
+    include Object
   end
 end
