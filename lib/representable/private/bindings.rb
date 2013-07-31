@@ -18,11 +18,11 @@ require 'representable/private/representers'
     end
 
     def serialize(value) # DISCUSS: pass from outside?
-      decorate(value).serialize # prepare, to_json
+      decorate.serialize(value) # prepare, to_json
     end
 
     def deserialize(fragment)
-      decorate(nil).deserialize(fragment) # prepare, from_json # FIXME: nothing to decorate here!
+      decorate.deserialize(fragment) # prepare, from_json # FIXME: nothing to decorate here!
     end
 
   # DISCUSS: have wrapping _and_ representing in one class?
@@ -32,8 +32,8 @@ require 'representable/private/representers'
       @definition.from
     end
 
-    def decorate(value)
-      ObjectRepresenter.new(value, @definition, format)
+    def decorate
+      ObjectRepresenter.new(@definition, format)
       # how to get scalar wrapped by property binding? we could reuse the same ScalarRepresenter here for all formats, then
     end
 

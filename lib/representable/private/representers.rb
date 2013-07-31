@@ -10,8 +10,7 @@
 # erweitere, rendere was auch immer, weitergeben and FragmentBinding!
 
 class ObjectRepresenter
-  def initialize(represented, definition, format)
-    @represented = represented
+  def initialize(definition, format)
     @definition = definition
 
     @format = format
@@ -19,8 +18,8 @@ class ObjectRepresenter
     #@decorator = prepare ----> pass in represented here? what about create_object, then?
   end
 
-  def serialize
-    serialize_for(@represented)
+  def serialize(object)
+    serialize_for(object)
   end
 
   def deserialize(data)
@@ -64,19 +63,18 @@ private
   end
 
   def representer_module_for(object)
-    puts "def: #{@definition.inspect}"
     unless @definition.typed?
-      puts "extending as #{@definition.inspect} NOT typed"
+      return  HashScalarDecorator
     end
 
-    #return  HashScalarDecorator unless @definition.typed?
+
     @definition.representer_module_for(object) # =>  || HashScalarDecorator # FIXME: this should be a generic Decorator
     # FIXME: also, what if there's not represnter module configured since object.is_a?(Representable) class?
   end
 end
 
 class CollectionRepresenter # means: #serialize/#deserialize
-  def initialize(definition,format=:hash, item_binding_class=ObjectBinding)
+  def initialize(definition, format=:hash, item_binding_class=ObjectBinding)
     @definition = definition
     @format = format
     @item_binding = item_binding_class.new(definition)
@@ -85,13 +83,14 @@ class CollectionRepresenter # means: #serialize/#deserialize
   def serialize(value) # DISCUSS: pass from outside?
     value.collect do |obj| # DISCUSS: what if we wanna keep the original array?
       #item_binding.serialize(obj)
-      ObjectRepresenter.new(obj, @definition, @format).serialize
+      ObjectRepresenter.new(@definition, @format).serialize(obj)
     end
   end
 
   def deserialize(array)
     array.collect do |hsh|
       item_binding.deserialize(hsh)
+      #ObjectRepresenter.new(nil, @definition, @format).deserialize(hsh) # this uses create_object and fucks up.
     end
   end
 
