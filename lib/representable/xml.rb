@@ -49,11 +49,15 @@ module Representable
     def to_node(options={})
       root_tag = options[:wrap] || representation_wrap
 
-      create_representation_with(Nokogiri::XML::Node.new(root_tag.to_s, Nokogiri::XML::Document.new), options, PropertyBinding)
+      create_representation_with(Nokogiri::XML::NodeSet.new(Nokogiri::XML::Document.new), options, PropertyBinding)
     end
 
-    def to_xml(*args)
-      to_node(*args).to_s
+    def to_xml(options={})
+      nodes = to_node(options)
+
+      root_tag = options[:wrap] || representation_wrap
+
+      (Nokogiri::XML::Node.new(root_tag.to_s, Nokogiri::XML::Document.new) << nodes).to_s
     end
   end
 end

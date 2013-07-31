@@ -55,25 +55,13 @@ module Representable
 
 
     class HashBinding < CollectionBinding
-      def serialize_for(value, parent)
-        set_for(parent, value.collect do |k, v|
-          node = node_for(parent, k)
-          serialize_node(node, v)
-        end)
-      end
 
-      def deserialize_from(nodes)
-        {}.tap do |hash|
-          nodes.children.each do |node|
-            hash[node.name] = deserialize_node(node)
-          end
-        end
-      end
     end
 
     class AttributeHashBinding < CollectionBinding
       # DISCUSS: use AttributeBinding here?
       def write(parent, value)  # DISCUSS: is it correct overriding #write here?
+        raise
         value.collect do |k, v|
           parent[k] = serialize(v.to_s)
         end
@@ -102,6 +90,10 @@ module Representable
 
       def write(parent, value)
         serialize_for(value, parent)
+      end
+
+      def serialize(value)
+        value # should use ScalarRepresenter
       end
     end
   end

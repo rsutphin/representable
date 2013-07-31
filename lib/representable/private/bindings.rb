@@ -33,7 +33,8 @@ require 'representable/private/representers'
     end
 
     def decorate(value)
-      ObjectRepresenter.new(value, @definition, format) # FIXME: remove need for SimplerDefinition.
+      ObjectRepresenter.new(value, @definition, format)
+      # how to get scalar wrapped by property binding? we could reuse the same ScalarRepresenter here for all formats, then
     end
 
     def format
@@ -47,33 +48,11 @@ require 'representable/private/representers'
   class JSONScalarBinding < JSONObjectBinding # DISCUSS: do we really need this binding?
     def initialize(*)
       super
-      @definition.options[:extend] = HashScalarDecorator
+      @definition.options[:extend] = HashScalarDecorator # the universal scalar decorator for now.
     end
   end
 
-  class CollectionRepresenter # means: #serialize/#deserialize
-    def initialize(definition,format=:hash, item_binding_class=ObjectBinding)
-      @definition = definition
-      @item_binding = item_binding_class.new(definition)
-      @format = format
-    end
 
-    def serialize(value) # DISCUSS: pass from outside?
-      value.collect do |obj| # DISCUSS: what if we wanna keep the original array?
-        #item_binding.serialize(obj)
-        ObjectRepresenter.new(obj, @definition, @format).serialize
-      end
-    end
-
-    def deserialize(array)
-      array.collect do |hsh|
-        item_binding.deserialize(hsh)
-      end
-    end
-
-  private
-    attr_reader :item_binding
-  end
 
   class JSONCollectionBinding < JSONObjectBinding # inherit #read and #write
     def initialize(definition, item_binding_class=ObjectBinding) # TODO: don't use Binding but Representer here! we only want serialize/deserialize!
@@ -130,17 +109,17 @@ require 'representable/private/representers'
     #   parent
     # end
     def write(parent, value)
-      # DISCUSS: this would be like Hash does it. however, does it make sense to have unwrapped stuff in XML?
-      # node_for(parent, from).tap do |wrap|
-      #   wrap << serialize(value)
-      # end
+       #DISCUSS: this would be like Hash does it. however, does it make sense to have unwrapped stuff in XML?
+       node_for(parent, from).tap do |wrap|
 
-      parent << serialize(value)
+         parent << (wrap << serialize(value))
+       end
+
+      #parent << serialize(value)
     end
 
     def read(node)
       nodes = find_nodes(node)
-
       deserialize(nodes)
     end
 
@@ -167,22 +146,14 @@ require 'representable/private/representers'
       @definition.options[:extend] = XMLScalarDecorator # FIXME: merge with JSONScalarBinding.
     end
 
-    class Scalar
-      def initialize(scalar, from)
-        @scalar, @from = scalar, from
-      end
-      attr_reader :from
-      def to_s
-        @scalar
-      end
-    end
-
     def serialize(value)
-      super Scalar.new(value, from)
+      super
     end
 
     def deserialize(node)
-      super node.children.first.content # should that be in #read?
+      puts node.inspect
+      return node.children.first.content
+      node# should that be in #read?
     end
   end
 
@@ -196,7 +167,11 @@ require 'representable/private/representers'
     def write(parent, items)
       nodes = serialize(items) # each->to_node
 
-      parent << set_for(parent, nodes)
+
+
+      nodes = nodes.collect do |nod| # an XML Collection binding is absolutely ok to wrap items. e.g. we could add indexes here etc <song position="1">
+        parent << (Nokogiri::XML::Node.new(from, parent.document) << nod)
+      end
     end
 
     def serialize(value)
@@ -208,6 +183,7 @@ require 'representable/private/representers'
     end
 
   private
+  # FIXME: remove.
     def set_for(parent, nodes)
       Nokogiri::XML::NodeSet.new(parent.document, nodes)
     end
