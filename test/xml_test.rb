@@ -98,28 +98,28 @@ class XmlTest < MiniTest::Spec
       it "delegates to #to_node and returns string" do
         assert_xml_equal "<band><name>Rise Against</name></band>", Band.new("Rise Against").to_xml
       end
-    end
-
-
-    describe "#to_node" do
-      it "returns Nokogiri node" do
-        node = Band.new("Rise Against").to_node
-        assert_kind_of Nokogiri::XML::Element, node
-      end
 
       it "wraps with infered class name per default" do
-        node = Band.new("Rise Against").to_node
-        assert_xml_equal "<band><name>Rise Against</name></band>", node.to_s
+        Band.new("Rise Against").to_xml.must_equal_xml "<band><name>Rise Against</name></band>"
       end
 
       it "respects #representation_wrap=" do
         klass = Class.new(Band) do
           include Representable
           property :name
+
+          self.representation_wrap = :group
         end
 
-        klass.representation_wrap = :group
-        assert_xml_equal "<group><name>Rise Against</name></group>", klass.new("Rise Against").to_node.to_s
+        klass.new("Rise Against").to_xml.must_equal_xml "<group><name>Rise Against</name></group>"
+      end
+    end
+
+
+    describe "#to_node" do
+      it "returns Nokogiri node set" do # TODO: move to private.
+        node = Band.new("Rise Against").to_node
+        assert_kind_of Nokogiri::XML::NodeSet, node
       end
     end
 
@@ -182,7 +182,7 @@ class XmlTest < MiniTest::Spec
         @album.extend(AlbumRepresenter)
 
         assert_xml_equal "<album>
-  <song><name>Mr. Charisma</name></song>
+  <best_song><name>Mr. Charisma</name></best_song>
   <song><name>I Hate My Brain</name></song>
   <song><name>Mr. Charisma</name></song>
 </album>", @album.to_xml
