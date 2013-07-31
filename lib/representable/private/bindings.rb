@@ -2,8 +2,9 @@ require 'representable/private/representers'
 
 
   class JSONObjectBinding
-    def initialize(definition)
-      @definition = definition
+    def initialize(definition, representer=ObjectRepresenter) # ObjectRep cause we try to keep it generic (if there wouldn't be XML scalars!)
+      @definition   = definition
+      @representer  = representer
     end
 
     def write(hash, value)
@@ -17,7 +18,7 @@ require 'representable/private/representers'
       deserialize(fragment)
     end
 
-    def serialize(value) # DISCUSS: pass from outside?
+    def serialize(value)
       decorate.serialize(value) # prepare, to_json
     end
 
@@ -33,7 +34,7 @@ require 'representable/private/representers'
     end
 
     def decorate
-      ObjectRepresenter.new(@definition, format)
+      @representer.new(@definition, format)
       # how to get scalar wrapped by property binding? we could reuse the same ScalarRepresenter here for all formats, then
     end
 
@@ -42,20 +43,10 @@ require 'representable/private/representers'
     end
   end
   class ObjectBinding < JSONObjectBinding
-
   end
-
-  class JSONScalarBinding < JSONObjectBinding # DISCUSS: do we really need this binding?
-    def initialize(*)
-      super
-      @definition.options[:extend] = HashScalarDecorator # the universal scalar decorator for now.
-    end
-  end
-
-
 
   class JSONCollectionBinding < JSONObjectBinding # inherit #read and #write
-    def initialize(definition, item_binding_class=ObjectBinding) # TODO: don't use Binding but Representer here! we only want serialize/deserialize!
+    def initialize(definition, item_binding_class=ObjectRepresenter) # TODO: don't use Binding but Representer here! we only want serialize/deserialize!
       @definition = definition
       @item_binding_class = item_binding_class
     end
@@ -72,13 +63,13 @@ require 'representable/private/representers'
 
   # this is kindof the transformer from an abstract hash into the concrete representation, egg hash.
   class JSONHashBinding < JSONObjectBinding
-    def initialize(definition, item_binding_class=ObjectBinding)
+    def initialize(definition, item_binding_class=ObjectRepresenter)
       @definition = definition
       @item_binding_class = item_binding_class
     end # FIXME: yeah
 
     def item_binding
-        @item_binding_class.new(@definition)
+        @item_binding_class.new(@definition, format)
       end
 
 
@@ -159,7 +150,7 @@ require 'representable/private/representers'
 
   class XMLCollectionBinding < XMLObjectBinding
     #include JSONCollectionBinding::SerialMethods # this double-inheritance is an indicator for my wrong class structure.
-    def initialize(definition, item_binding_class=XMLObjectBinding)
+    def initialize(definition, item_binding_class=ObjectRepresenter)
       @definition = definition
       @item_binding_class = item_binding_class
     end
@@ -190,7 +181,7 @@ require 'representable/private/representers'
   end
 
   class XMLHashBinding < JSONHashBinding
-    def initialize(definition, item_binding_class=XMLObjectBinding)
+    def initialize(definition, item_binding_class=ObjectRepresenter)
       @definition = definition
         @item_binding_class = item_binding_class
     end

@@ -23,7 +23,7 @@ module Representable::Hash
       if bin.typed?
           bbin= JSONCollectionBinding.new(bin)
         else
-         bbin= JSONCollectionBinding.new(bin, JSONScalarBinding)
+         bbin= JSONCollectionBinding.new(bin, AlmightyScalarRepresenter)
        end
 
        value = bbin.serialize(represented )
@@ -36,7 +36,7 @@ module Representable::Hash
       if bin.typed?
           bbin= JSONCollectionBinding.new(bin)
         else
-         bbin= JSONCollectionBinding.new(bin, JSONScalarBinding)
+         bbin= JSONCollectionBinding.new(bin, AlmightyScalarRepresenter)
        end
 
        value = bbin.deserialize(doc )

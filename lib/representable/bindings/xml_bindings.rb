@@ -13,7 +13,7 @@ module Representable
 
       def write(parent, value)
         return XMLObjectBinding.new(self).write(parent, value) if typed?
-        XMLScalarBinding.new(self).write(parent, value)
+        XMLObjectBinding.new(self, AlmightyScalarRepresenter).write(parent, value)
       end
 
       def read(node)
@@ -21,7 +21,7 @@ module Representable
         return FragmentNotFound if nodes.size == 0 # TODO: write dedicated test!
 
         return XMLObjectBinding.new(self).read(node) if typed?
-        return XMLScalarBinding.new(self).read(node)
+        return XMLObjectBinding.new(self, AlmightyScalarRepresenter).read(node)
       end
 
 
@@ -36,13 +36,13 @@ module Representable
     class CollectionBinding < PropertyBinding
       def write(hash, value)
         return XMLCollectionBinding.new(self).write(hash, value) if typed?
-        return XMLCollectionBinding.new(self, XMLScalarBinding).write(hash, value)
+        return XMLCollectionBinding.new(self, AlmightyScalarRepresenter).write(hash, value)
       end
 
       def read(hash)
         # DISCUSS: where is the check for existance?
         return XMLCollectionBinding.new(self).read(hash) if typed?
-        return XMLCollectionBinding.new(self, XMLScalarBinding).read(hash)
+        return XMLCollectionBinding.new(self, AlmightyScalarRepresenter).read(hash)
       end
 
     private

@@ -14,7 +14,7 @@ module Representable
       if bin.typed?
           bbin= JSONHashBinding.new(bin)
         else
-         bbin= JSONHashBinding.new(bin, XMLScalarBinding)
+         bbin= JSONHashBinding.new(bin, AlmightyScalarRepresenter)
        end
 
       bbin.serialize(hash)
@@ -29,7 +29,7 @@ module Representable
       if bin.typed?
           bbin= JSONHashBinding.new(bin)
         else
-         bbin= JSONHashBinding.new(bin, XMLScalarBinding)
+         bbin= JSONHashBinding.new(bin, AlmightyScalarRepresenter)
        end
 
        value = bbin.deserialize(hash)

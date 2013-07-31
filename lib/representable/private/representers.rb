@@ -63,27 +63,38 @@ private
   end
 
   def representer_module_for(object)
-    unless @definition.typed?
-      return  HashScalarDecorator
-    end
-
-
     @definition.representer_module_for(object) # =>  || HashScalarDecorator # FIXME: this should be a generic Decorator
     # FIXME: also, what if there's not represnter module configured since object.is_a?(Representable) class?
   end
 end
 
+  class AlmightyScalarRepresenter
+    def initialize(definition, format)
+      @format = format
+    end
+
+    def serialize(value)
+      value
+    end
+
+    def deserialize(hash)
+      return hash.children.first.content if @format == :node # FIXME: handle that in nokogiri so we don't need to decide here.
+      hash
+    end
+  end
+
+
 class CollectionRepresenter # means: #serialize/#deserialize
-  def initialize(definition, format=:hash, item_binding_class=ObjectBinding)
+  def initialize(definition, format=:hash, item_binding_class=ObjectRepresenter)
     @definition = definition
     @format = format
-    @item_binding = item_binding_class.new(definition)
+    @item_binding = item_binding_class.new(definition, format)
   end
 
   def serialize(value) # DISCUSS: pass from outside?
     value.collect do |obj| # DISCUSS: what if we wanna keep the original array?
       #item_binding.serialize(obj)
-      ObjectRepresenter.new(@definition, @format).serialize(obj)
+      item_binding.serialize(obj)
     end
   end
 
@@ -95,29 +106,4 @@ class CollectionRepresenter # means: #serialize/#deserialize
   end
 
   attr_reader :item_binding
-end
-
-class HashScalarDecorator < Representable::Decorator # we don't really have to inherit here.
-  def to_hash(*)
-    represented
-  end
-
-  def from_hash(hash, *args)
-    # this currently works cause create_object returns the scalar from the doc, which is then @represented in the decorator. what about speed here?
-    hash
-  end
-
-  alias_method :to_node, :to_hash
-  #alias_method :from_node, :from_hash
-  def from_node(node, *args)
-    node.children.first.content
-  end
-end
-
-class XMLScalarDecorator < HashScalarDecorator # we don't really have to inherit here.
-  alias_method :to_node, :to_hash
-  #alias_method :from_node, :from_hash
-  def from_node(node, *args)
-    node.children.first.content
-  end
 end
