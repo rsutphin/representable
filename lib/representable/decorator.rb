@@ -9,6 +9,8 @@ module Representable
 
     def self.inline_representer(base_module, &block) # DISCUSS: separate module?
       Class.new(self) do
+        # Remove parent's property definitions before defining the inline ones.
+        self.representable_attrs.clear
         include base_module
         instance_exec &block
       end
