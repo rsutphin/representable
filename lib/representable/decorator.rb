@@ -11,6 +11,7 @@ module Representable
       Class.new(self) do
         # Remove parent's property definitions before defining the inline ones.
         self.representable_attrs.clear
+        self.representable_attrs.inheritable_arrays.clear
         include base_module
         instance_exec &block
       end
